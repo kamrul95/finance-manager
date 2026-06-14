@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { Plus, Trash2, Search, CalendarRange, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Trash2, Search, CalendarRange, Pencil, ChevronLeft, ChevronRight, Calculator } from 'lucide-react'
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, addDays, addWeeks, addMonths, addYears, format, isToday, isThisWeek, isThisMonth } from 'date-fns'
 
 interface Wallet { id: string; name: string; currency: string }
@@ -366,6 +366,7 @@ function TransactionForm({ wallets, categories, transaction, onClose, onSaved }:
   const [note, setNote] = useState(transaction?.note ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [showCalc, setShowCalc] = useState(false)
 
   const filteredCats = categories.filter(c => c.type === (type === 'INCOME' ? 'INCOME' : 'EXPENSE') || !c.type)
   const flatCats: { id: string; label: string }[] = []
@@ -473,9 +474,26 @@ function TransactionForm({ wallets, categories, transaction, onClose, onSaved }:
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Amount</label>
-              <input type="number" min="0.01" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)}
-                className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="0.00" />
+              <div className="relative">
+                <input type="number" min="0.01" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)}
+                  className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 pr-9 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="0.00" />
+                <button
+                  type="button"
+                  onClick={() => setShowCalc(true)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition"
+                  title="Open calculator"
+                >
+                  <Calculator className="w-4 h-4" />
+                </button>
+              </div>
+              {showCalc && (
+                <CalcModal
+                  initial={amount}
+                  onDone={(val) => { setAmount(val); setShowCalc(false) }}
+                  onClose={() => setShowCalc(false)}
+                />
+              )}
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Date</label>
@@ -506,6 +524,117 @@ function TransactionForm({ wallets, categories, transaction, onClose, onSaved }:
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Calculator Modal ─────────────────────────────────────────────────── */
+
+function CalcModal({ initial, onDone, onClose }: {
+  initial: string
+  onDone: (val: string) => void
+  onClose: () => void
+}) {
+  const [expr, setExpr] = useState(initial || '')
+  const [display, setDisplay] = useState(initial || '0')
+
+  function press(key: string) {
+    if (key === 'C') { setExpr(''); setDisplay('0'); return }
+    if (key === '⌫') {
+      const next = expr.slice(0, -1)
+      setExpr(next)
+      setDisplay(next || '0')
+      return
+    }
+    if (key === '=') {
+      try {
+        // Safe eval: only digits and operators
+        const safe = expr.replace(/[^0-9+\-*/.()]/g, '')
+        // eslint-disable-next-line no-new-func
+        const result = new Function('return ' + safe)()
+        const rounded = parseFloat(result.toFixed(2))
+        setDisplay(String(rounded))
+        setExpr(String(rounded))
+      } catch {
+        setDisplay('Error')
+      }
+      return
+    }
+    const next = expr + key
+    setExpr(next)
+    setDisplay(next)
+  }
+
+  const rows = [
+    ['C', '⌫', '(', ')'],
+    ['7', '8', '9', '/'],
+    ['4', '5', '6', '*'],
+    ['1', '2', '3', '-'],
+    ['0', '.', '=', '+'],
+  ]
+
+  const isOp = (k: string) => ['+', '-', '*', '/'].includes(k)
+  const isAction = (k: string) => ['C', '⌫', '(', ')'].includes(k)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/40" />
+      <div
+        className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-xs p-4 space-y-3"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Display */}
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-3 text-right">
+          <p className="text-xs text-gray-400 truncate min-h-[16px]">{expr || ' '}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white truncate">{display}</p>
+        </div>
+
+        {/* Keys */}
+        <div className="grid grid-cols-4 gap-2">
+          {rows.flat().map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => press(key)}
+              className={`
+                h-12 rounded-xl text-sm font-semibold transition active:scale-95
+                ${key === '='
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white col-span-1'
+                  : isOp(key)
+                    ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800/60'
+                    : isAction(key)
+                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
+                }
+              `}
+            >
+              {key}
+            </button>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              // If display shows a valid number, use it
+              const num = parseFloat(display)
+              if (!isNaN(num) && num > 0) onDone(String(parseFloat(num.toFixed(2))))
+            }}
+            className="flex-1 py-2 text-sm rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition"
+          >
+            Use ৳{isNaN(parseFloat(display)) ? '–' : parseFloat(display).toFixed(2)}
+          </button>
+        </div>
       </div>
     </div>
   )
