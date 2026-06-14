@@ -92,7 +92,7 @@ export default function TransactionsPage() {
   const [page, setPage] = useState(1)
   const [periodTotals, setPeriodTotals] = useState({ income: 0, expense: 0 })
 
-  const { from, to, label: periodLabel } = getDateRange(period, offset, customFrom, customTo)
+  const { label: periodLabel } = getDateRange(period, offset, customFrom, customTo)
 
   const loadTransactions = useCallback(async () => {
     if (period === 'range' && (!customFrom || !customTo)) return

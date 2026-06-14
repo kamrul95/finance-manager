@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Plus, Trash2, ChevronRight, Pencil } from 'lucide-react'
 
 interface Category {
@@ -18,12 +18,12 @@ export default function CategoriesPage() {
   // Category being renamed
   const [renamingCat, setRenamingCat] = useState<Category | null>(null)
 
-  async function load() {
+  const load = useCallback(async () => {
     const res = await fetch(`/api/categories?type=${tab}`)
     setCategories(await res.json())
-  }
+  }, [tab])
 
-  useEffect(() => { load() }, [tab])
+  useEffect(() => { load() }, [load])
 
   async function deleteCategory(id: string, hasSubs = false) {
     if (!confirm(hasSubs ? 'Delete this category and all its subcategories?' : 'Delete this subcategory?')) return

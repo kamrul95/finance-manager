@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireUser } from '@/lib/auth'
-import { startOfMonth, endOfMonth, subMonths, format, parseISO, eachMonthOfInterval } from 'date-fns'
+import { startOfMonth, endOfMonth, subMonths, format, eachMonthOfInterval } from 'date-fns'
 import { bdStartOfDay, bdEndOfDay } from '@/lib/utils'
 
 export async function GET(req: Request) {
