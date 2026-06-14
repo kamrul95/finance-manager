@@ -148,98 +148,102 @@ export default function ReportsPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Period tabs */}
-        <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 text-xs">
-          {PERIOD_OPTIONS.map(opt => (
+      <div className="space-y-2">
+        {/* Row 1: Period tabs — scrollable on mobile */}
+        <div className="overflow-x-auto pb-0.5">
+          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 text-xs w-max">
+            {PERIOD_OPTIONS.map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => { setPeriod(opt.key); setOffset(0); setShowPicker(false) }}
+                className={`px-2.5 py-1.5 font-medium transition whitespace-nowrap ${
+                  period === opt.key
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
             <button
-              key={opt.key}
-              onClick={() => { setPeriod(opt.key); setOffset(0); setShowPicker(false) }}
-              className={`px-3 py-1.5 font-medium transition ${
-                period === opt.key
+              onClick={() => { setPeriod('range'); setOffset(0); setShowPicker(true) }}
+              className={`px-3 py-1.5 font-medium transition flex items-center gap-1 ${
+                period === 'range'
                   ? 'bg-indigo-600 text-white'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
               }`}
             >
-              {opt.label}
-            </button>
-          ))}
-          <button
-            onClick={() => { setPeriod('range'); setOffset(0); setShowPicker(true) }}
-            className={`px-3 py-1.5 font-medium transition flex items-center gap-1 ${
-              period === 'range'
-                ? 'bg-indigo-600 text-white'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-            }`}
-          >
-            <CalendarRange className="w-3 h-3" />
-            Range
-          </button>
-        </div>
-
-        {/* Prev / label / Next */}
-        {showNav && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setOffset(o => o - 1)}
-              className="p-1 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-32 text-center">{periodLabel}</span>
-            <button
-              onClick={() => setOffset(o => o + 1)}
-              disabled={forwardDisabled}
-              className="p-1 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition disabled:opacity-30"
-            >
-              <ChevronRight className="w-4 h-4" />
+              <CalendarRange className="w-3 h-3" />
+              Range
             </button>
           </div>
-        )}
+        </div>
 
-        {/* Period totals pill */}
-        {report && (
-          <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
-            {period === 'range' && <span className="text-gray-400">{periodLabel}</span>}
-            <span className="text-green-600 font-medium">+{formatCurrency(periodIncome)}</span>
-            <span className="text-red-500 font-medium">−{formatCurrency(periodExpense)}</span>
-            <span className={`font-semibold ${periodNet >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>
-              Net {formatCurrency(periodNet)}
-            </span>
+        {/* Row 2: Prev/Next + period totals */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          {showNav ? (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setOffset(o => o - 1)}
+                className="p-1 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-28 text-center">{periodLabel}</span>
+              <button
+                onClick={() => setOffset(o => o + 1)}
+                disabled={forwardDisabled}
+                className="p-1 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition disabled:opacity-30"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div />
+          )}
+          {report && (
+            <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+              {period === 'range' && <span className="text-gray-400">{periodLabel}</span>}
+              <span className="text-green-600 font-medium">+{formatCurrency(periodIncome)}</span>
+              <span className="text-red-500 font-medium">−{formatCurrency(periodExpense)}</span>
+              <span className={`font-semibold ${periodNet >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>
+                Net {formatCurrency(periodNet)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Custom date range picker */}
+        {period === 'range' && showPicker && (
+          <div className="grid grid-cols-2 gap-3 p-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">From</label>
+              <input
+                type="date"
+                value={customFrom}
+                onChange={e => setCustomFrom(e.target.value)}
+                className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">To</label>
+              <input
+                type="date"
+                value={customTo}
+                onChange={e => setCustomTo(e.target.value)}
+                className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <button
+              onClick={() => setShowPicker(false)}
+              disabled={!customFrom || !customTo}
+              className="col-span-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg transition disabled:opacity-40"
+            >
+              Apply
+            </button>
           </div>
         )}
       </div>
-
-      {/* Custom date range picker */}
-      {period === 'range' && showPicker && (
-        <div className="flex flex-wrap items-end gap-3 p-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">From</label>
-            <input
-              type="date"
-              value={customFrom}
-              onChange={e => setCustomFrom(e.target.value)}
-              className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">To</label>
-            <input
-              type="date"
-              value={customTo}
-              onChange={e => setCustomTo(e.target.value)}
-              className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <button
-            onClick={() => setShowPicker(false)}
-            disabled={!customFrom || !customTo}
-            className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg transition disabled:opacity-40"
-          >
-            Apply
-          </button>
-        </div>
-      )}
 
       {/* Monthly trend bar chart */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800">

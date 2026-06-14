@@ -134,91 +134,90 @@ export default function TransactionsPage() {
     : transactions
 
   return (
-    <div className="space-y-4">
-      {/* Period filter */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Period tabs */}
-        <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 text-xs">
-          {PERIODS.map(p => (
-            <button
-              key={p.key}
-              onClick={() => {
-                setPeriod(p.key); setOffset(0); setPage(1)
-                if (p.key === 'range') setShowRangePicker(true)
-                else setShowRangePicker(false)
-              }}
-              className={`px-3 py-1.5 font-medium transition flex items-center gap-1 ${
-                period === p.key
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-              }`}
-            >
-              {p.key === 'range' && <CalendarRange className="w-3 h-3" />}
-              {p.label}
-            </button>
-          ))}
+    <div className="space-y-3">
+      {/* Row 1: Period tabs + Add button */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 overflow-x-auto pb-0.5">
+          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 text-xs w-max">
+            {PERIODS.map(p => (
+              <button
+                key={p.key}
+                onClick={() => {
+                  setPeriod(p.key); setOffset(0); setPage(1)
+                  if (p.key === 'range') setShowRangePicker(true)
+                  else setShowRangePicker(false)
+                }}
+                className={`px-2.5 py-1.5 font-medium transition flex items-center gap-1 whitespace-nowrap ${
+                  period === p.key
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
+              >
+                {p.key === 'range' && <CalendarRange className="w-3 h-3" />}
+                {p.label}
+              </button>
+            ))}
+          </div>
         </div>
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+          <span className="hidden sm:inline">Add</span>
+        </button>
+      </div>
 
-        {/* Prev / label / Next — only for navigable periods */}
-        {period !== 'all' && period !== 'range' && (
+      {/* Row 2: Prev/Next nav + Totals */}
+      {period !== 'all' && period !== 'range' && (
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1">
             <button onClick={() => { setOffset(o => o - 1); setPage(1) }}
               className="p-1 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-28 text-center">{periodLabel}</span>
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-24 text-center">{periodLabel}</span>
             <button onClick={() => { setOffset(o => o + 1); setPage(1) }}
               disabled={offset >= 0}
               className="p-1 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition disabled:opacity-30">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-        )}
-
-        {/* Totals */}
-        {transactions.length > 0 && (
-          <div className="flex items-center gap-4 text-xs">
-            <div className="flex flex-col items-center">
-              <span className="text-gray-400 mb-0.5">Income</span>
-              <span className="text-green-600 font-semibold">{formatCurrency(periodTotals.income)}</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-gray-400 mb-0.5">Expense</span>
-              <span className="text-red-500 font-semibold">{formatCurrency(periodTotals.expense)}</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-gray-400 mb-0.5">Net</span>
-              <span className={`font-semibold ${periodTotals.income - periodTotals.expense >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>
+          {transactions.length > 0 && (
+            <div className="flex items-center gap-3 text-xs">
+              <span className="text-green-600 font-semibold">+{formatCurrency(periodTotals.income)}</span>
+              <span className="text-red-500 font-semibold">−{formatCurrency(periodTotals.expense)}</span>
+              <span className={`font-bold ${periodTotals.income - periodTotals.expense >= 0 ? 'text-indigo-600' : 'text-red-500'}`}>
                 {formatCurrency(periodTotals.income - periodTotals.expense)}
               </span>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Custom range picker */}
       {period === 'range' && showRangePicker && (
-        <div className="flex flex-wrap items-end gap-3 p-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+        <div className="grid grid-cols-2 gap-3 p-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
           <div>
             <label className="block text-xs text-gray-500 mb-1">From</label>
             <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
-              className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">To</label>
             <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
-              className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <button onClick={() => setShowRangePicker(false)} disabled={!customFrom || !customTo}
-            className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg transition disabled:opacity-40">
+            className="col-span-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg transition disabled:opacity-40">
             Apply
           </button>
         </div>
       )}
 
-      {/* Search + type + wallet filters */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-48">
+      {/* Row 3: Search + filters */}
+      <div className="space-y-2">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -227,40 +226,36 @@ export default function TransactionsPage() {
             onChange={e => setFilter(f => ({ ...f, search: e.target.value }))}
           />
         </div>
-        <select
-          className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-900 focus:outline-none"
-          value={filter.type}
-          onChange={e => { setFilter(f => ({ ...f, type: e.target.value })); setPage(1) }}
-        >
-          {TYPES.map(t => <option key={t} value={t}>{t || 'All types'}</option>)}
-        </select>
-        <select
-          className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-900 focus:outline-none"
-          value={filter.walletId}
-          onChange={e => { setFilter(f => ({ ...f, walletId: e.target.value })); setPage(1) }}
-        >
-          <option value="">All wallets</option>
-          {wallets.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-        </select>
-        <select
-          className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-900 focus:outline-none"
-          value={filter.categoryId}
-          onChange={e => { setFilter(f => ({ ...f, categoryId: e.target.value })); setPage(1) }}
-        >
-          <option value="">All categories</option>
-          {categories.flatMap(cat => [
-            <option key={cat.id} value={cat.id}>{cat.name}</option>,
-            ...(cat.subcategories ?? []).map(sub => (
-              <option key={sub.id} value={sub.id}>&nbsp;&nbsp;↳ {sub.name}</option>
-            )),
-          ])}
-        </select>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
-        >
-          <Plus className="w-4 h-4" /> Add
-        </button>
+        <div className="grid grid-cols-3 gap-2">
+          <select
+            className="text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-2 bg-white dark:bg-gray-900 focus:outline-none"
+            value={filter.type}
+            onChange={e => { setFilter(f => ({ ...f, type: e.target.value })); setPage(1) }}
+          >
+            {TYPES.map(t => <option key={t} value={t}>{t || 'All types'}</option>)}
+          </select>
+          <select
+            className="text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-2 bg-white dark:bg-gray-900 focus:outline-none"
+            value={filter.walletId}
+            onChange={e => { setFilter(f => ({ ...f, walletId: e.target.value })); setPage(1) }}
+          >
+            <option value="">All wallets</option>
+            {wallets.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+          </select>
+          <select
+            className="text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-2 bg-white dark:bg-gray-900 focus:outline-none"
+            value={filter.categoryId}
+            onChange={e => { setFilter(f => ({ ...f, categoryId: e.target.value })); setPage(1) }}
+          >
+            <option value="">All categories</option>
+            {categories.flatMap(cat => [
+              <option key={cat.id} value={cat.id}>{cat.name}</option>,
+              ...(cat.subcategories ?? []).map(sub => (
+                <option key={sub.id} value={sub.id}>&nbsp;&nbsp;↳ {sub.name}</option>
+              )),
+            ])}
+          </select>
+        </div>
       </div>
 
       {/* Table */}

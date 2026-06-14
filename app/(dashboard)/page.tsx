@@ -143,10 +143,12 @@ export default function Dashboard() {
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
 
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-gray-200 dark:border-gray-800">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Transactions</h2>
-
-          <div className="flex items-center gap-2">
+        <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Transactions</h2>
+            <Link href="/transactions" className="text-xs text-indigo-600 hover:underline whitespace-nowrap">View all</Link>
+          </div>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             {/* Period tabs */}
             <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 text-xs">
               {PERIODS.map(p => (
@@ -181,8 +183,6 @@ export default function Dashboard() {
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-
-            <Link href="/transactions" className="text-xs text-indigo-600 hover:underline whitespace-nowrap">View all</Link>
           </div>
         </div>
 
