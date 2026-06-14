@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum WalletType {
+  CASH
+  BANK
+  MOBILE_BANKING
+  CREDIT_CARD
+  SAVINGS
+  INVESTMENT
+  DEBT
+  OTHER
+}
+
+enum TransactionType {
+  EXPENSE
+  INCOME
+  TRANSFER
+}
+
+enum CategoryType {
+  EXPENSE
+  INCOME
+}
+
+enum BudgetPeriod {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum DebtDirection {
+  LENT
+  BORROWED
+}
+
+model Wallet {
+  id          String     @id @default(cuid())
+  userId      String     @map("user_id")
+  name        String
+  type        WalletType @default(CASH)
+  currency    String     @default("BDT")
+  balance     Float      @default(0)
+  color       String     @default("#6366f1")
+  icon        String     @default("wallet")
+  isExcluded  Boolean    @default(false) @map("is_excluded")
+  isArchived  Boolean    @default(false) @map("is_archived")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  transactions         Transaction[] @relation("WalletTransactions")
+  transferTransactions Transaction[] @relation("TransferToWallet")
+
+  @@map("wallets")
+}
+
+model Category {
+  id        String       @id @default(cuid())
+  userId    String       @map("user_id")
+  name      String
+  type      CategoryType
+  parentId  String?      @map("parent_id")
+  color     String       @default("#6366f1")
+  icon      String       @default("tag")
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  parent       Category?  @relation("Subcategories", fields: [parentId], references: [id])
+  subcategories Category[] @relation("Subcategories")
+  transactions  Transaction[]
+  budgets       Budget[]
+
+  @@map("categories")
+}
+
+model Transaction {
+  id                        String          @id @default(cuid())
+  userId                    String          @map("user_id")
+  walletId                  String          @map("wallet_id")
+  categoryId                String?         @map("category_id")
+  type                      TransactionType
+  amount                    Float
+  currency                  String          @default("BDT")
+  amountInDefaultCurrency   Float           @map("amount_in_default_currency")
+  defaultCurrency           String          @default("BDT") @map("default_currency")
+  transferToWalletId        String?         @map("transfer_to_wallet_id")
+  date                      DateTime
+  note                      String?
+  tags                      String[]        @default([])
+  receiptUrl                String?         @map("receipt_url")
+  isRecurring               Boolean         @default(false) @map("is_recurring")
+  recurrenceRule            Json?           @map("recurrence_rule")
+  createdAt                 DateTime        @default(now()) @map("created_at")
+  updatedAt                 DateTime        @updatedAt @map("updated_at")
+
+  wallet           Wallet    @relation("WalletTransactions", fields: [walletId], references: [id])
+  transferToWallet Wallet?   @relation("TransferToWallet", fields: [transferToWalletId], references: [id])
+  category         Category? @relation(fields: [categoryId], references: [id])
+
+  @@map("transactions")
+}
+
+model Budget {
+  id         String       @id @default(cuid())
+  userId     String       @map("user_id")
+  categoryId String?      @map("category_id")
+  name       String
+  amount     Float
+  currency   String       @default("BDT")
+  period     BudgetPeriod @default(MONTHLY)
+  rollover   Boolean      @default(false)
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  @@map("budgets")
+}
+
+model Goal {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  name          String
+  targetAmount  Float    @map("target_amount")
+  currentAmount Float    @default(0) @map("current_amount")
+  currency      String   @default("BDT")
+  deadline      DateTime?
+  note          String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("goals")
+}
+
+model Debt {
+  id          String        @id @default(cuid())
+  userId      String        @map("user_id")
+  personName  String        @map("person_name")
+  direction   DebtDirection
+  amount      Float
+  currency    String        @default("BDT")
+  dueDate     DateTime?     @map("due_date")
+  isSettled   Boolean       @default(false) @map("is_settled")
+  note        String?
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  @@map("debts")
+}
