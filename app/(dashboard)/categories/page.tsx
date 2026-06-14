@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, Trash2, ChevronRight, Pencil } from 'lucide-react'
+import { Plus, Trash2, ChevronRight, Pencil, ChevronUp, ChevronDown } from 'lucide-react'
 
 interface Category {
-  id: string; name: string; type: 'EXPENSE' | 'INCOME'; color: string; icon: string
+  id: string; name: string; type: 'EXPENSE' | 'INCOME'; color: string; icon: string; sortOrder: number
   subcategories: Category[]
 }
 
@@ -20,7 +20,8 @@ export default function CategoriesPage() {
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/categories?type=${tab}`)
-    setCategories(await res.json())
+    const data = await res.json()
+    setCategories(Array.isArray(data) ? data : [])
   }, [tab])
 
   useEffect(() => { load() }, [load])
@@ -29,6 +30,33 @@ export default function CategoriesPage() {
     if (!confirm(hasSubs ? 'Delete this category and all its subcategories?' : 'Delete this subcategory?')) return
     await fetch(`/api/categories/${id}`, { method: 'DELETE' })
     load()
+  }
+
+  async function moveParent(index: number, dir: -1 | 1) {
+    const next = [...categories]
+    const swap = index + dir
+    if (swap < 0 || swap >= next.length) return
+    ;[next[index], next[swap]] = [next[swap], next[index]]
+    setCategories(next)
+    await fetch('/api/categories/reorder', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: next.map(c => c.id) }),
+    })
+  }
+
+  async function moveSub(parentIndex: number, subIndex: number, dir: -1 | 1) {
+    const next = categories.map(c => ({ ...c, subcategories: [...c.subcategories] }))
+    const subs = next[parentIndex].subcategories
+    const swap = subIndex + dir
+    if (swap < 0 || swap >= subs.length) return
+    ;[subs[subIndex], subs[swap]] = [subs[swap], subs[subIndex]]
+    setCategories(next)
+    await fetch('/api/categories/reorder', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: subs.map(s => s.id) }),
+    })
   }
 
   return (
@@ -54,51 +82,72 @@ export default function CategoriesPage() {
         {categories.length === 0 && (
           <div className="py-10 text-center text-sm text-gray-400">No categories yet</div>
         )}
-        {categories.map(cat => (
+        {categories.map((cat, catIdx) => (
           <div key={cat.id}>
             {/* Parent category row */}
-            <div className="flex items-center justify-between px-5 py-3 group">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between px-4 py-3 group">
+              {/* Reorder buttons */}
+              <div className="flex flex-col mr-1 shrink-0">
+                <button onClick={() => moveParent(catIdx, -1)} disabled={catIdx === 0}
+                  className="p-0.5 text-gray-300 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-20 transition">
+                  <ChevronUp className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => moveParent(catIdx, 1)} disabled={catIdx === categories.length - 1}
+                  className="p-0.5 text-gray-300 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-20 transition">
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: cat.color }}>
                   {cat.name.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">{cat.name}</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{cat.name}</span>
                 {cat.subcategories.length > 0 && (
-                  <span className="text-xs text-gray-400">{cat.subcategories.length} subcategories</span>
+                  <span className="text-xs text-gray-400 shrink-0">{cat.subcategories.length} subs</span>
                 )}
               </div>
-              <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition">
-                <button
-                  onClick={() => setRenamingCat(cat)}
-                  className="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-1"
-                  title="Edit category"
-                >
+
+              <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition shrink-0">
+                <button onClick={() => setRenamingCat(cat)}
+                  className="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-1">
                   <Pencil className="w-3 h-3" /> Edit
                 </button>
-                <button
-                  onClick={() => setEditingParent(cat)}
-                  className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-                  title="Edit subcategories"
-                >
+                <button onClick={() => setEditingParent(cat)}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
                   <Pencil className="w-3 h-3" />
                   {cat.subcategories.length > 0 ? 'Edit subs' : 'Add subs'}
                 </button>
-                <button onClick={() => deleteCategory(cat.id, cat.subcategories.length > 0)} className="text-gray-300 hover:text-red-500 transition">
+                <button onClick={() => deleteCategory(cat.id, cat.subcategories.length > 0)}
+                  className="text-gray-300 hover:text-red-500 transition">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
             {/* Subcategory rows */}
-            {cat.subcategories.map(sub => (
-              <div key={sub.id} className="flex items-center justify-between pl-16 pr-5 py-2.5 group bg-gray-50/50 dark:bg-gray-800/20">
-                <div className="flex items-center gap-2 min-w-0">
+            {cat.subcategories.map((sub, subIdx) => (
+              <div key={sub.id} className="flex items-center justify-between pl-10 pr-5 py-2.5 group bg-gray-50/50 dark:bg-gray-800/20">
+                {/* Sub reorder buttons */}
+                <div className="flex flex-col mr-1 shrink-0">
+                  <button onClick={() => moveSub(catIdx, subIdx, -1)} disabled={subIdx === 0}
+                    className="p-0.5 text-gray-300 hover:text-gray-500 disabled:opacity-20 transition">
+                    <ChevronUp className="w-3 h-3" />
+                  </button>
+                  <button onClick={() => moveSub(catIdx, subIdx, 1)} disabled={subIdx === cat.subcategories.length - 1}
+                    className="p-0.5 text-gray-300 hover:text-gray-500 disabled:opacity-20 transition">
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 min-w-0 flex-1">
                   <ChevronRight className="w-3 h-3 text-gray-300 shrink-0" />
                   <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: sub.color }}>
                     {sub.name.charAt(0).toUpperCase()}
                   </div>
                   <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{sub.name}</span>
                 </div>
+
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition shrink-0">
                   <button onClick={() => setRenamingCat(sub)} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition">
                     <Pencil className="w-3.5 h-3.5" />

@@ -268,12 +268,12 @@ export default function ReportsPage() {
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Monthly Savings</h2>
           <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={(report?.monthlyTrend ?? []).map(m => ({ ...m, savings: m.income - m.expense }))}>
+            <LineChart data={report?.monthlyTrend ?? []}>
               <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `৳${(v/1000).toFixed(0)}k`} />
               <CartesianGrid vertical={false} stroke="#f0f0f0" />
               <Tooltip formatter={(v: number) => formatCurrency(v)} />
-              <Line type="monotone" dataKey="savings" stroke="#6366f1" strokeWidth={2} dot={false} name="Savings" />
+              <Line type="monotone" dataKey="saved" stroke="#6366f1" strokeWidth={2} dot={false} name="Saved" />
             </LineChart>
           </ResponsiveContainer>
         </div>

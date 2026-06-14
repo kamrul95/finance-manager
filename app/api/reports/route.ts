@@ -39,10 +39,10 @@ export async function GET(req: Request) {
     const trendStart = startOfMonth(start)
     const trendEnd = endOfMonth(end)
     const months = eachMonthOfInterval({ start: trendStart, end: trendEnd })
-    const monthlyMap: Record<string, { month: string; income: number; expense: number }> = {}
+    const monthlyMap: Record<string, { month: string; income: number; expense: number; saved: number }> = {}
     for (const d of months) {
       const key = format(d, 'yyyy-MM')
-      monthlyMap[key] = { month: format(d, 'MMM yy'), income: 0, expense: 0 }
+      monthlyMap[key] = { month: format(d, 'MMM yy'), income: 0, expense: 0, saved: 0 }
     }
 
     for (const tx of transactions) {
@@ -50,6 +50,35 @@ export async function GET(req: Request) {
       if (!monthlyMap[key]) continue
       if (tx.type === 'INCOME') monthlyMap[key].income += tx.amountInDefaultCurrency
       if (tx.type === 'EXPENSE') monthlyMap[key].expense += tx.amountInDefaultCurrency
+    }
+
+    // Per-month savings: transfers to savings wallets − expenses from savings wallets
+    const [trendSavingsTransfers, trendSavingsExpenses] = await Promise.all([
+      prisma.transaction.findMany({
+        where: {
+          userId: user.id,
+          type: 'TRANSFER',
+          date: { gte: trendStart, lte: trendEnd },
+          transferToWallet: { type: { in: ['SAVINGS', 'INVESTMENT'] } },
+        },
+      }),
+      prisma.transaction.findMany({
+        where: {
+          userId: user.id,
+          type: 'EXPENSE',
+          date: { gte: trendStart, lte: trendEnd },
+          wallet: { type: { in: ['SAVINGS', 'INVESTMENT'] } },
+        },
+      }),
+    ])
+
+    for (const tx of trendSavingsTransfers) {
+      const key = format(tx.date, 'yyyy-MM')
+      if (monthlyMap[key]) monthlyMap[key].saved += tx.amountInDefaultCurrency
+    }
+    for (const tx of trendSavingsExpenses) {
+      const key = format(tx.date, 'yyyy-MM')
+      if (monthlyMap[key]) monthlyMap[key].saved -= tx.amountInDefaultCurrency
     }
 
     // Category breakdown — use selected range (not just this month)
@@ -89,6 +118,29 @@ export async function GET(req: Request) {
     const thisMonthIncome = thisMonthTxns.filter(t => t.type === 'INCOME').reduce((s, t) => s + t.amountInDefaultCurrency, 0)
     const thisMonthExpense = thisMonthTxns.filter(t => t.type === 'EXPENSE').reduce((s, t) => s + t.amountInDefaultCurrency, 0)
 
+    // Net saved this month = transfers IN to savings wallets − expenses OUT from savings wallets
+    const [savingsTransfers, savingsExpenses] = await Promise.all([
+      prisma.transaction.findMany({
+        where: {
+          userId: user.id,
+          type: 'TRANSFER',
+          date: { gte: thisMonthStart, lte: thisMonthEnd },
+          transferToWallet: { type: { in: ['SAVINGS', 'INVESTMENT'] } },
+        },
+      }),
+      prisma.transaction.findMany({
+        where: {
+          userId: user.id,
+          type: 'EXPENSE',
+          date: { gte: thisMonthStart, lte: thisMonthEnd },
+          wallet: { type: { in: ['SAVINGS', 'INVESTMENT'] } },
+        },
+      }),
+    ])
+    const thisMonthSaved =
+      savingsTransfers.reduce((s, t) => s + t.amountInDefaultCurrency, 0) -
+      savingsExpenses.reduce((s, t) => s + t.amountInDefaultCurrency, 0)
+
     // Category breakdown scoped to THIS MONTH only (for dashboard pie)
     const thisMonthCategoryMap: Record<string, { name: string; amount: number; color: string }> = {}
     for (const tx of thisMonthTxns) {
@@ -105,7 +157,7 @@ export async function GET(req: Request) {
       categoryBreakdown: Object.values(categoryMap).sort((a, b) => b.amount - a.amount),
       thisMonthCategoryBreakdown: Object.values(thisMonthCategoryMap).sort((a, b) => b.amount - a.amount),
       netWorth,
-      thisMonth: { income: thisMonthIncome, expense: thisMonthExpense },
+      thisMonth: { income: thisMonthIncome, expense: thisMonthExpense, saved: thisMonthSaved },
       period: { income: periodIncome, expense: periodExpense },
     })
   } catch {

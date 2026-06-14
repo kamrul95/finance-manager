@@ -1,8 +1,11 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Plus, Trash2, Search, CalendarRange, Pencil, ChevronLeft, ChevronRight, Calculator } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import DatePicker from '@/components/ui/DatePicker'
+import CategoryPicker from '@/components/ui/CategoryPicker'
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, addDays, addWeeks, addMonths, addYears, format, isToday, isThisWeek, isThisMonth } from 'date-fns'
 
 interface Wallet { id: string; name: string; currency: string }
@@ -77,11 +80,13 @@ function getDateRange(period: FilterPeriod, offset: number, customFrom: string, 
 }
 
 export default function TransactionsPage() {
+  const searchParams = useSearchParams()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [total, setTotal] = useState(0)
   const [wallets, setWallets] = useState<Wallet[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [showForm, setShowForm] = useState(false)
+  const autoOpenedRef = useRef(false)
   const [editing, setEditing] = useState<Transaction | null>(null)
   const [filter, setFilter] = useState({ type: '', walletId: '', categoryId: '', search: '' })
   const [period, setPeriod] = useState<FilterPeriod>('day')
@@ -118,6 +123,12 @@ export default function TransactionsPage() {
     fetch('/api/wallets').then(r => r.json()).then(d => setWallets(Array.isArray(d) ? d : []))
     fetch('/api/categories').then(r => r.json()).then(d => setCategories(Array.isArray(d) ? d : []))
   }, [])
+  useEffect(() => {
+    if (!autoOpenedRef.current && searchParams.get('new') === '1') {
+      autoOpenedRef.current = true
+      setShowForm(true)
+    }
+  }, [searchParams])
 
   async function deleteTransaction(id: string) {
     if (!confirm('Delete this transaction?')) return
@@ -369,13 +380,6 @@ function TransactionForm({ wallets, categories, transaction, onClose, onSaved }:
   const [showCalc, setShowCalc] = useState(false)
 
   const filteredCats = categories.filter(c => c.type === (type === 'INCOME' ? 'INCOME' : 'EXPENSE') || !c.type)
-  const flatCats: { id: string; label: string }[] = []
-  for (const cat of filteredCats) {
-    flatCats.push({ id: cat.id, label: cat.name })
-    for (const sub of cat.subcategories ?? []) {
-      flatCats.push({ id: sub.id, label: `  ${cat.name} / ${sub.name}` })
-    }
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -462,44 +466,42 @@ function TransactionForm({ wallets, categories, transaction, onClose, onSaved }:
             ) : (
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Category / Subcategory</label>
-                <select value={categoryId} onChange={e => setCategoryId(e.target.value)}
-                  className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 focus:outline-none">
-                  <option value="">No category</option>
-                  {flatCats.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                </select>
+                <CategoryPicker
+                  categories={filteredCats}
+                  value={categoryId}
+                  onChange={setCategoryId}
+                />
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Amount</label>
-              <div className="relative">
-                <input type="number" min="0.01" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)}
-                  className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 pr-9 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="0.00" />
-                <button
-                  type="button"
-                  onClick={() => setShowCalc(true)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition"
-                  title="Open calculator"
-                >
-                  <Calculator className="w-4 h-4" />
-                </button>
-              </div>
-              {showCalc && (
-                <CalcModal
-                  initial={amount}
-                  onDone={(val) => { setAmount(val); setShowCalc(false) }}
-                  onClose={() => setShowCalc(false)}
-                />
-              )}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Amount</label>
+            <div className="relative">
+              <input type="number" min="0.01" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)}
+                className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 pr-9 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="0.00" />
+              <button
+                type="button"
+                onClick={() => setShowCalc(true)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition"
+                title="Open calculator"
+              >
+                <Calculator className="w-4 h-4" />
+              </button>
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Date</label>
-              <input type="date" required value={date} onChange={e => setDate(e.target.value)}
-                className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-            </div>
+            {showCalc && (
+              <CalcModal
+                initial={amount}
+                onDone={(val) => { setAmount(val); setShowCalc(false) }}
+                onClose={() => setShowCalc(false)}
+              />
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Date</label>
+            <DatePicker value={date} onChange={setDate} required />
           </div>
 
           <div>

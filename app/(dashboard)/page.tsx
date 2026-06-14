@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { TrendingUp, TrendingDown, Wallet, ArrowLeftRight, ChevronLeft, ChevronRight } from 'lucide-react'
+import { TrendingUp, TrendingDown, Wallet, ChevronLeft, ChevronRight, Plus, PiggyBank } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 import Link from 'next/link'
 import {
@@ -14,7 +14,7 @@ interface ReportData {
   monthlyTrend: { month: string; income: number; expense: number }[]
   thisMonthCategoryBreakdown: { name: string; amount: number; color: string }[]
   netWorth: number
-  thisMonth: { income: number; expense: number }
+  thisMonth: { income: number; expense: number; saved: number }
 }
 
 interface Transaction {
@@ -25,6 +25,16 @@ interface Transaction {
   note: string | null
   category?: { name: string; color: string } | null
   wallet: { name: string }
+}
+
+interface WalletSummary {
+  id: string; name: string; type: string; balance: number; color: string; isExcluded: boolean; currency: string
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  CASH: 'Cash', BANK: 'Bank', MOBILE_BANKING: 'Mobile Banking',
+  CREDIT_CARD: 'Credit Card', SAVINGS: 'Savings', INVESTMENT: 'Investment',
+  DEBT: 'Debt', OTHER: 'Other',
 }
 
 type FilterPeriod = 'day' | 'week' | 'month'
@@ -58,10 +68,12 @@ function getRange(period: FilterPeriod, offset: number) {
 export default function Dashboard() {
   const [report, setReport] = useState<ReportData | null>(null)
   const [recent, setRecent] = useState<Transaction[]>([])
-  const [walletTotal, setWalletTotal] = useState(0)
+  const [wallets, setWallets] = useState<WalletSummary[]>([])
   const [period, setPeriod] = useState<FilterPeriod>('day')
   const [offset, setOffset] = useState(0)
   const [periodTotals, setPeriodTotals] = useState({ income: 0, expense: 0 })
+
+  const walletTotal = wallets.filter(w => !w.isExcluded).reduce((s, w) => s + w.balance, 0)
 
   const { from, to, label } = getRange(period, offset)
 
@@ -78,14 +90,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetch('/api/reports?months=6').then(r => r.json()).then(setReport)
-    fetch('/api/wallets').then(r => r.json()).then((ws: { balance: number; isExcluded: boolean }[]) =>
-      setWalletTotal(ws.filter(w => !w.isExcluded).reduce((s, w) => s + w.balance, 0))
-    )
+    fetch('/api/wallets').then(r => r.json()).then(d => setWallets(Array.isArray(d) ? d : []))
   }, [])
 
   useEffect(() => { loadTransactions() }, [loadTransactions])
 
-  const savings = report ? report.thisMonth.income - report.thisMonth.expense : 0
+  const monthlySaved = report?.thisMonth.saved ?? 0
 
   const PERIODS: { key: FilterPeriod; label: string }[] = [
     { key: 'day', label: 'Day' },
@@ -95,13 +105,62 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Page header with Add Transaction */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm text-gray-500 dark:text-gray-400">Overview</h2>
+        </div>
+        <Link
+          href="/transactions?new=1"
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add Transaction</span>
+        </Link>
+      </div>
+
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Net Worth" value={formatCurrency(walletTotal)} icon={<Wallet className="w-5 h-5 text-indigo-500" />} />
         <StatCard label="This Month Income" value={formatCurrency(report?.thisMonth.income ?? 0)} icon={<TrendingUp className="w-5 h-5 text-green-500" />} color="green" />
         <StatCard label="This Month Expense" value={formatCurrency(report?.thisMonth.expense ?? 0)} icon={<TrendingDown className="w-5 h-5 text-red-500" />} color="red" />
-        <StatCard label="This Month Savings" value={formatCurrency(savings)} icon={<ArrowLeftRight className="w-5 h-5 text-blue-500" />} color={savings >= 0 ? 'blue' : 'red'} />
+        <StatCard label="Saved This Month" value={formatCurrency(monthlySaved)} icon={<PiggyBank className="w-5 h-5 text-blue-500" />} color="blue" />
       </div>
+
+      {/* Wallets summary */}
+      {wallets.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center gap-2">
+              <PiggyBank className="w-4 h-4 text-indigo-500" />
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">My Wallets</h2>
+            </div>
+            <Link href="/wallets" className="text-xs text-indigo-600 hover:underline">Manage</Link>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {wallets.filter(w => !w.isExcluded).map(w => (
+              <div key={w.id} className="flex items-center justify-between px-5 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: w.color + '25' }}>
+                    <span className="text-xs font-bold" style={{ color: w.color }}>{w.name.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 dark:text-white">{w.name}</p>
+                    <p className="text-xs text-gray-400">{TYPE_LABELS[w.type] ?? w.type}</p>
+                  </div>
+                </div>
+                <span className={`text-sm font-semibold ${w.balance < 0 ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
+                  {formatCurrency(w.balance, w.currency)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-gray-800/40 border-t border-gray-100 dark:border-gray-800">
+            <span className="text-xs font-medium text-gray-500">Total Net Worth</span>
+            <span className="text-sm font-bold text-indigo-600">{formatCurrency(walletTotal)}</span>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Monthly trend chart */}

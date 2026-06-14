@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Plus, Check, Trash2, Pencil, Calculator } from 'lucide-react'
+import DatePicker from '@/components/ui/DatePicker'
 
 interface Debt {
   id: string; personName: string; direction: 'LENT' | 'BORROWED'
@@ -193,9 +194,7 @@ function DebtForm({ debt, onClose, onSaved }: { debt?: Debt; onClose: () => void
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Due Date (optional)</label>
-            <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-              className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 focus:outline-none"
-            />
+            <DatePicker value={dueDate} onChange={setDueDate} showQuickDays={false} allowFuture />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Note (optional)</label>
