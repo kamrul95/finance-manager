@@ -19,9 +19,9 @@ export async function POST(req: Request) {
     const file = formData.get('file') as File
     if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
-    const buffer = Buffer.from(await file.arrayBuffer())
+    const arrayBuffer = await file.arrayBuffer()
     const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
+    await workbook.xlsx.load(arrayBuffer as Buffer)
 
     const result: ImportResult = { imported: 0, skipped: 0, errors: [], walletsCreated: [], categoriesCreated: [] }
 
