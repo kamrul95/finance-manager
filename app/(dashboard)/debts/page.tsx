@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Plus, Check, Trash2 } from 'lucide-react'
 
@@ -14,11 +14,11 @@ export default function DebtsPage() {
   const [showForm, setShowForm] = useState(false)
   const [tab, setTab] = useState<'active' | 'settled'>('active')
 
-  async function load() {
+  const load = useCallback(() => {
     fetch('/api/debts').then(r => r.json()).then(setDebts)
-  }
+  }, [])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [load])
 
   async function settle(id: string) {
     await fetch(`/api/debts/${id}`, {

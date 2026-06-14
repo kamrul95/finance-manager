@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { formatCurrency } from '@/lib/utils'
 import { Plus, Trash2, Pencil, Wallet, SlidersHorizontal } from 'lucide-react'
 
@@ -22,13 +22,13 @@ export default function WalletsPage() {
   const [editing, setEditing] = useState<WalletItem | null>(null)
   const [adjusting, setAdjusting] = useState<WalletItem | null>(null)
 
-  async function load() {
+  const load = useCallback(async () => {
     const res = await fetch('/api/wallets')
     const data = await res.json()
     setWallets(Array.isArray(data) ? data : [])
-  }
+  }, [])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [load])
 
   async function deleteWallet(id: string) {
     if (!confirm('Archive this wallet? It will be hidden everywhere but your transaction history is kept.')) return

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Plus, Trash2, Target } from 'lucide-react'
 
@@ -14,11 +14,11 @@ export default function GoalsPage() {
   const [showForm, setShowForm] = useState(false)
   const [contribute, setContribute] = useState<Goal | null>(null)
 
-  async function load() {
+  const load = useCallback(() => {
     fetch('/api/goals').then(r => r.json()).then(setGoals)
-  }
+  }, [])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [load])
 
   async function deleteGoal(id: string) {
     if (!confirm('Delete this goal?')) return

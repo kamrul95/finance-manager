@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { formatCurrency } from '@/lib/utils'
 import { Plus, Trash2 } from 'lucide-react'
 
@@ -15,12 +15,12 @@ export default function BudgetsPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [showForm, setShowForm] = useState(false)
 
-  async function load() {
+  const load = useCallback(() => {
     fetch('/api/budgets').then(r => r.json()).then(setBudgets)
     fetch('/api/categories?type=EXPENSE').then(r => r.json()).then(setCategories)
-  }
+  }, [])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [load])
 
   async function deleteBudget(id: string) {
     await fetch(`/api/budgets/${id}`, { method: 'DELETE' })

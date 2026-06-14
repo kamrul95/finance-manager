@@ -21,7 +21,8 @@ export async function POST(req: Request) {
 
     const arrayBuffer = await file.arrayBuffer()
     const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(arrayBuffer as Buffer)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await workbook.xlsx.load(Buffer.from(arrayBuffer) as any)
 
     const result: ImportResult = { imported: 0, skipped: 0, errors: [], walletsCreated: [], categoriesCreated: [] }
 
