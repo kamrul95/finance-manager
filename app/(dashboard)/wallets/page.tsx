@@ -326,7 +326,6 @@ function CalcModal({ initial, onDone, onClose }: {
     if (key === '=') {
       try {
         const safe = expr.replace(/[^0-9+\-*/.()]/g, '')
-        // eslint-disable-next-line no-new-func
         const result = new Function('return ' + safe)()
         const rounded = parseFloat(result.toFixed(2))
         setDisplay(String(rounded))

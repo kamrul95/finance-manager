@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Plus, Trash2, Search, CalendarRange, Pencil, ChevronLeft, ChevronRight, Calculator } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
@@ -79,7 +79,7 @@ function getDateRange(period: FilterPeriod, offset: number, customFrom: string, 
   }
 }
 
-export default function TransactionsPage() {
+function TransactionsPage() {
   const searchParams = useSearchParams()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [total, setTotal] = useState(0)
@@ -553,7 +553,6 @@ function CalcModal({ initial, onDone, onClose }: {
       try {
         // Safe eval: only digits and operators
         const safe = expr.replace(/[^0-9+\-*/.()]/g, '')
-        // eslint-disable-next-line no-new-func
         const result = new Function('return ' + safe)()
         const rounded = parseFloat(result.toFixed(2))
         setDisplay(String(rounded))
@@ -639,5 +638,13 @@ function CalcModal({ initial, onDone, onClose }: {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function TransactionsPageWrapper() {
+  return (
+    <Suspense>
+      <TransactionsPage />
+    </Suspense>
   )
 }
