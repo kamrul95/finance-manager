@@ -1,7 +1,7 @@
 {
   "name": "Finance Manager",
   "short_name": "Finance",
-  "description": "Personal finance tracker — wallets, expenses, budgets, goals",
+  "description": "Personal finance tracker for wallets, expenses, budgets, and goals",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f9fafb",
